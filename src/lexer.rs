@@ -4,26 +4,27 @@ pub struct Punctuation {
     kind: PunctutationKind
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub enum PunctutationKind {
     Open(usize),
     Close(usize),
     Seperator
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub enum TokenType {
-    Punctuation{raw: String, kind: PunctutationKind},
-    Operator(String),
-    Identifier(String),
-    Number(String),
+    Punctuation(PunctutationKind),
+    Operator,
+    Identifier,
+    Number,
     EOF
 }
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Token {
     pub ty: TokenType,
-    collumn: usize,
-    line: usize
+    pub raw: String,
+    pub collumn: usize,
+    pub line: usize
 }
 
 #[derive(Debug)]
@@ -52,7 +53,7 @@ impl<'a> Lexer<'a> {
     pub fn new(chars: &'a str) -> Lexer<'a> {
         Lexer {
             chars: chars.chars().peekable(),
-            cur_line: 0,
+            cur_line: 1,
             cur_collumn: 0,
             cur_curly: 0,
             cur_paren: 0
@@ -66,13 +67,12 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn is_punctuation(c: char)      -> bool { "(){},;\"".contains(c) }
-    fn is_seperator(c: char)        -> bool { ",;\"".contains(c) }
-    fn is_part_of_operator(c: char) -> bool { "+=-*/><!&|".contains(c) }
-
+    fn is_punctuation(c: char)      -> bool { "(){},;".contains(c) }
+    fn is_seperator(c: char)        -> bool { ",;".contains(c) }
+    fn is_operator(c: char)         -> bool { "+=-*/><!&|".contains(c) }
 
     fn parse_identifier(&mut self) -> Token { 
-        let mut raw = "".to_string();
+        let mut raw = String::new();
         loop {
             if let Some(c) = self.chars.peek() {
                 if Lexer::is_identifier(*c) || (raw.len() > 0 && c.is_numeric()) {
@@ -85,14 +85,15 @@ impl<'a> Lexer<'a> {
             else { break; }
         }
         return Token {
-            ty: TokenType::Identifier(raw),
+            ty: TokenType::Identifier,
+            raw: raw,
             collumn: self.cur_collumn,
             line: self.cur_line
         }
     }
 
     fn parse_number(&mut self) -> Result<Token, LexerErr> {
-        let mut raw = "".to_string();
+        let mut raw = String::new();
         loop {
             if let Some(c) = self.chars.peek() {
                 if c.is_numeric() {
@@ -112,7 +113,8 @@ impl<'a> Lexer<'a> {
             else { break; }
         }
         return Ok(Token {
-            ty: TokenType::Number(raw),
+            ty: TokenType::Number,
+            raw: raw,
             collumn: self.cur_collumn,
             line: self.cur_line
         })
@@ -123,14 +125,14 @@ impl<'a> Lexer<'a> {
         match c.as_str() {
             "(" | "{" => {
                 let token = Token {
-                    ty: TokenType::Punctuation { 
-                        raw: c.clone(), 
-                        kind: PunctutationKind::Open(match c.as_str() {
+                    ty: TokenType::Punctuation(
+                        PunctutationKind::Open(match c.as_str() {
                             "(" => self.cur_paren,
                             "{" => self.cur_curly,
                             _ => 0
                         }) 
-                    },
+                    ),
+                    raw: c.clone(),
                     collumn: self.cur_collumn,
                     line: self.cur_line
                 };
@@ -162,10 +164,10 @@ impl<'a> Lexer<'a> {
                         _ => {}
                     }
                     return Ok(Token {
-                        ty: TokenType::Punctuation { 
-                            raw: c.clone(), 
-                            kind: PunctutationKind::Close(current - 1) 
-                        },
+                        ty: TokenType::Punctuation(
+                            PunctutationKind::Close(current - 1) 
+                        ),
+                        raw: c.clone(),
                         collumn: self.cur_collumn,
                         line: self.cur_line
                     });
@@ -204,10 +206,10 @@ impl<'a> Lexer<'a> {
     
                     if Lexer::is_seperator(*c) {
                         return Ok(Token {
-                            ty: TokenType::Punctuation { 
-                                raw: self.chars.next().expect("Always exists").to_string(), 
-                                kind: PunctutationKind::Seperator 
-                            },
+                            ty: TokenType::Punctuation (
+                                PunctutationKind::Seperator 
+                            ),
+                            raw: self.chars.next().expect("Always exists").to_string(),
                             collumn: self.cur_collumn,
                             line: self.cur_line
                         });
@@ -215,17 +217,18 @@ impl<'a> Lexer<'a> {
                     return self.parse_paren();
                 }
 
-                else if Lexer::is_part_of_operator(*c) {
+                else if Lexer::is_operator(*c) {
                     let mut operator = self.chars.next().expect("Always exists").to_string();
                     if let Some(nxt) = self.chars.peek() {
-                        if Lexer::is_part_of_operator(*nxt) {
+                        if Lexer::is_operator(*nxt) {
                             operator.push(*nxt);
                             self.chars.next();
                             self.cur_collumn += 1;
                         }
                     }
                     return Ok(Token {
-                        ty: TokenType::Operator(operator),
+                        ty: TokenType::Operator,
+                        raw: operator,
                         collumn: self.cur_collumn,
                         line: self.cur_line
                     })
@@ -243,6 +246,7 @@ impl<'a> Lexer<'a> {
             }
             return Ok(Token {
                 ty: TokenType::EOF,
+                raw: String::new(),
                 collumn: self.cur_collumn,
                 line: self.cur_line
             });
