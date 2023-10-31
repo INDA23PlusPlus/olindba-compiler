@@ -1,0 +1,2 @@
+#include<iostream>
+int next,second,first,third,a,b;int main(){first=0;second=1;for(int i=0;i<30;i++){next=first+second;first=second;second=next;std::cout<<first<<std::endl;}if(first>2192*321){third=1;while(third<first){third=2*third;}std::cout<<third<<std::endl;}else{std::cout<<0<<std::endl;}a=1;for(int i=0;i<100;i++){a=a+1;b=0;while(a>=b){b=b+a/2;}std::cout<<b<<std::endl;}}

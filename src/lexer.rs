@@ -71,6 +71,17 @@ impl<'a> Lexer<'a> {
     fn is_seperator(c: char)        -> bool { ",;".contains(c) }
     fn is_operator(c: char)         -> bool { "+=-*/><!&|".contains(c) }
 
+    fn skip_comment(&mut self) {
+        loop {
+            if let Some(c) = self.chars.next() {
+                if c == '\n' { break; }
+            }
+            else { break; }
+        }
+        self.cur_collumn = 0;
+        self.cur_line += 1;
+    }
+
     fn parse_identifier(&mut self) -> Token { 
         let mut raw = String::new();
         loop {
@@ -225,6 +236,10 @@ impl<'a> Lexer<'a> {
                             self.chars.next();
                             self.cur_collumn += 1;
                         }
+                    }
+                    if operator == "//" { 
+                        self.skip_comment();
+                        continue;
                     }
                     return Ok(Token {
                         ty: TokenType::Operator,

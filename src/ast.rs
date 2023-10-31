@@ -8,7 +8,7 @@ pub struct AstErr {
     line: usize
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Expression {
     Operation {
         left: Box<Expression>,
@@ -18,7 +18,7 @@ pub enum Expression {
     Value(String)
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Node {
     If {
         condition: Expression,
@@ -40,15 +40,16 @@ pub enum Node {
     VariableAssignment {
         identifier: String,
         value: Expression,
-        declaration: bool
     },
     Print(String)
 }
 
+#[derive(Clone)]
 pub struct Ast {
     tokens: Vec<Token>,
     cur: usize,
-    seen_variables: HashSet<String>
+    pub seen_variables: HashSet<String>,
+    pub sequence: Vec<Node>
 }
 
 impl Ast {
@@ -56,13 +57,12 @@ impl Ast {
         Ast { 
             tokens: tokens,
             cur: 0,
-            seen_variables: HashSet::new()
+            seen_variables: HashSet::new(),
+            sequence: vec![]
         }
     }   
 
-    pub fn generate_ast(&mut self) -> Result<Vec<Node>, AstErr> {
-        let mut sequence = vec![];
-        
+    pub fn generate_ast(&mut self) -> Option<AstErr> {
         loop {
             if self.tokens[self.cur].ty == TokenType::EOF {
                 break;
@@ -70,14 +70,14 @@ impl Ast {
             let node = self.parse_line();
             match node {
                 Ok(node) => {
-                    sequence.push(node);
+                    self.sequence.push(node);
                 },
                 Err(err) => {
-                    return Err(err);
+                    return Some(err);
                 }
             }
         }
-        Ok(sequence)
+        None
     }
 
     fn parse_line(&mut self) -> Result<Node, AstErr> {
@@ -142,10 +142,11 @@ impl Ast {
                                 }) 
                             }
                             let loop_count = self.tokens[self.cur].raw.parse::<usize>().unwrap();
-                            self.cur += 1;
+                            self.cur += 2;
                             let body = self.parse_body();
                             match body {
                                 Ok(body) => {
+                                    self.cur += 1;
                                     return Ok(Node::Loop { 
                                         loop_count: loop_count, 
                                         body: body 
@@ -155,8 +156,8 @@ impl Ast {
                             }
                         },
                         "print" => {
-                            self.cur += 3;
-                            return Ok(Node::Print(self.tokens[self.cur - 2].raw.clone()));
+                            self.cur += 4;
+                            return Ok(Node::Print(self.tokens[self.cur - 3].raw.clone()));
                         },
                         _ => {
                             return Err(AstErr { 
@@ -172,7 +173,6 @@ impl Ast {
                     let node = Node::VariableAssignment { 
                         identifier: token.raw.clone(), 
                         value: expression, 
-                        declaration: !self.seen_variables.contains(&token.raw)
                     };
                     self.seen_variables.insert(token.raw);
                     return Ok(node);

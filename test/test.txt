@@ -1,0 +1,32 @@
+// Implementation of Fibonacci sequence, prints first 30 values
+first = 0;
+second = 1;
+loop 30 {
+    next = first + second;
+    first = second;
+    second = next;
+    print(first);
+}
+
+// Condition testing, if and while
+if first > 2192 * 321 {
+    third = 1;
+    while third < first {
+        third = 2 * third;
+    }
+    print(third);
+}
+else {
+    print(0);
+}
+
+// More testing
+a = 1;
+loop 100 {
+    a = a + 1;
+    b = 0;
+    while a >= b {
+        b = b + a / 2;
+    }
+    print(b);
+}

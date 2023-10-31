@@ -1,46 +1,38 @@
 mod lexer;
 mod ast;
+mod gen;
 
 pub use crate::lexer::*;
 pub use crate::ast::*;
+pub use crate::gen::*;
+
+use std::fs;
 
 fn main() {
-    let mut lexer = Lexer::new(
-"
-if a == b {
-    if a == b {
-        a = 1;
-    }
-    a = 2;
-}"
-    );
+    let inp_code = fs::read_to_string("test/test.txt").unwrap();
+    let mut lexer = Lexer::new(inp_code.as_str());
     let mut tokens = vec![];
     loop {
         match lexer.next_token() {
             Ok(token) => {
                 tokens.push(token.clone());
-                if token.ty == TokenType::EOF {
-                    break;
-                }
-                else {
-                    println!("{:?}", token);
-                }
+                if token.ty == TokenType::EOF { break; }
+                else { println!("{:?}", token); }
             },
-            Err(err) => {
-                println!("{:?}", err);
-            }
+            Err(err) => { println!("{:?}", err); }
         }
     }
     let mut ast = Ast::new(tokens);
-    let ast_sequence = ast.generate_ast();
-    match ast_sequence {
-        Ok(sequence) => {
-            for ting in sequence {
-                println!("{:?}", ting);
-            }
-        },
-        Err(err) => {
-            println!("{:?}", err);
+    let ast_err = ast.generate_ast();
+    if let Some(err) = ast_err {
+        println!("{:?}", err);
+    }
+    else {
+        for node in ast.sequence.clone() {
+            println!("{:?}", node);
         }
     }
+
+    let code_out = generate_code(ast.clone());
+    let _ = fs::write("test/out.cpp", code_out);
 }
